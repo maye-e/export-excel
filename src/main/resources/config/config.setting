@@ -1,0 +1,9 @@
+# 导出路径
+filePath = C:\ztmp
+
+# 每页数据行数，默认值为 60w
+#pageSize = 40000
+
+
+
+
