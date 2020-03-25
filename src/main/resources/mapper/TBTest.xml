@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd">
+<mapper namespace="com.may.mapper.TBTestMapper">
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        <selectKey resultType ="java.lang.Integer" keyProperty= "id" order= "AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey >
+        insert into tb_test(
+            clo1,clo2,clo3,clo4,clo5,clo6,clo7,clo8,clo9,clo10,
+            clo11,clo12,clo13,clo14,clo15,clo16,clo17,clo18,clo19,clo20,
+            clo21,clo22,clo23,clo24,clo25,clo26,clo27,clo28,clo29,clo30,
+        )values
+        <foreach collection ="list" item="tbTestList" index= "index" separator =",">
+            (
+             #{tbTestList.clo1}, #{tbTestList.clo2},#{tbTestList.clo3},#{tbTestList.clo4},#{tbTestList.clo5},
+             #{tbTestList.clo6}, #{tbTestList.clo7},#{tbTestList.clo8},#{tbTestList.clo9},#{tbTestList.clo10},
+             #{tbTestList.clo11}, #{tbTestList.clo12},#{tbTestList.clo13},#{tbTestList.clo14},#{tbTestList.clo15},
+             #{tbTestList.clo16}, #{tbTestList.clo17},#{tbTestList.clo18},#{tbTestList.clo19},#{tbTestList.clo20},
+             #{tbTestList.clo21}, #{tbTestList.clo22},#{tbTestList.clo23},#{tbTestList.clo24},#{tbTestList.clo25},
+             #{tbTestList.clo26}, #{tbTestList.clo27},#{tbTestList.clo28},#{tbTestList.clo29},#{tbTestList.clo30},
+             )
+         </foreach >
+    </insert>
+</mapper>

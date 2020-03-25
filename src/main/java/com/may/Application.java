@@ -1,13 +1,15 @@
 package com.may;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ExportExcelApplication {
+@MapperScan("com.may.mapper")
+public class Application {
 
     public static void main(String[] args) {
-        SpringApplication.run(ExportExcelApplication.class, args);
+        SpringApplication.run(Application.class, args);
     }
 
 }

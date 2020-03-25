@@ -1,5 +1,6 @@
-package com.may.utils;
+package com.may.domain;
 
+import cn.hutool.core.bean.DynaBean;
 import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.NumberUtil;
@@ -7,8 +8,10 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.db.Db;
 import cn.hutool.db.Entity;
 import cn.hutool.db.ds.DSFactory;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
+import com.may.entity.TBTest;
+import com.may.service.TBTestService;
+import com.may.service.impl.TBTestServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -19,10 +22,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
+@Slf4j
 public class InsertThread {
-
-    static final Log log = LogFactory.get("野哥温馨提示");
     /*
         总共预备导入 100w 数据，每 1w 数据开线程插入一次，也就是 100 个线程
         服务器是 2核 4G，内存小一次不能插太多
@@ -34,7 +35,19 @@ public class InsertThread {
     static final String DB = "db_data";//要插入的库
 
     public static void main(String[] args) {
-        domain();
+//        domain();
+        int[] count = NumberUtil.range(1, 10);
+        int[] cols = NumberUtil.range(1, 30);
+        List<TBTest> list = new ArrayList<>();
+        //创建动态 bean. DynaBean.create() 还有一个重载方法,亦可传入 bean.class. 但直接传类时,会报异常,提示没有bean中对应的方法
+        Arrays.stream(count).forEach(i -> {
+            DynaBean tbTest = DynaBean.create(new TBTest());
+            Arrays.stream(cols).forEach(j -> tbTest.set("clo" + j, RandomUtil.randomEle(getDataArray())));//这里用动态bean通过反射调用set方法
+            list.add(tbTest.getBean());
+        });
+        TBTestService tbTestService = new TBTestServiceImpl();
+        tbTestService.insertBatch(list);
+
     }
 
     private static void domain() {
