@@ -1,10 +1,11 @@
-package com.may.domain;
+package com.may.controller;
 
 import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import cn.hutool.poi.excel.BigExcelWriter;
+import cn.hutool.poi.excel.ExcelUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.may.config.ExportConfig;
 import com.may.service.ExportService;
@@ -31,7 +32,7 @@ public class ExportExcel {
     @Resource
     private ExportService exportService;
 
-    public void main(String[] args) {
+    public void main0(String[] args) {
         String sqlDirectory = config.getSqlDirectory();
         if (!StrUtil.endWith(sqlDirectory, "\\")) {
             config.setSqlDirectory(sqlDirectory + "\\");//补全目录，下面好操作
@@ -44,15 +45,26 @@ public class ExportExcel {
 
         List<File> fileList = getSqlFileList(config.getSqlDirectory());
         fileList.stream().forEach(file -> {
-
-
-
-//            exportService.customQuery("select * from tb_test");
-
-
             //文件名
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
-
+            String sql = getSqlStr(file);
+            Integer pages = exportService.getPages(sql, new Page<>(1,config.getPageSize()));
+            IPage<LinkedHashMap> iPage = exportService.customQuery(sql, new Page(1, config.getPageSize()));
+            List<LinkedHashMap> records = iPage.getRecords();
+            BigExcelWriter bigWriter = ExcelUtil.getBigWriter("C:\\tmp\\1.xlsx");
+            for (LinkedHashMap row : records){
+                bigWriter.writeRow(row.values());
+            }
+            bigWriter.flush();
+            bigWriter.close();
+            /*IntStream.range(0,pages).forEach(i -> {
+                IPage<LinkedHashMap> page = exportService.customQuery(sql, new Page(i * config.getPageSize() + 1,config.getPageSize()));
+                BigExcelWriter writer = new BigExcelWriter(-1);
+                File file1 = new File(StrUtil.format("{}{}.xlsx", config.getExcelDirectory(), fileName));
+                writer.setDestFile(file1);
+                writer.write(page.getRecords());
+                writer.close();
+            });*/
         });
 
 
@@ -113,7 +125,7 @@ public class ExportExcel {
      */
     private String getSqlStr(File file){
         String sql = FileUtil.readString(file, "utf-8");
-        return StrUtil.endWith(sql, ";") ? sql : sql + ";";//补全分号，字符串操作好统一
+        return StrUtil.endWith(sql, ";") ? StrUtil.sub(sql,0,-1) : sql;//去掉分号，避免分页报错
     }
 
     /**

@@ -99,7 +99,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.may.domain.InsertThread</mainClass>
+                            <mainClass>com.may.controller.InsertThread</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

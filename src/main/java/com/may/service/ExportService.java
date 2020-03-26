@@ -13,4 +13,7 @@ public interface ExportService extends IService<LinkedHashMap> {
 
     //重载，分页查询
     IPage<LinkedHashMap> customQuery(String sql, Page<LinkedHashMap> page);
+
+    //获取总页数
+    Integer getPages(String sql, Page<LinkedHashMap> page);
 }

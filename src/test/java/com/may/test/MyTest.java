@@ -8,16 +8,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.may.ApplicationTest;
+import com.may.controller.ExportExcel;
 import com.may.entity.TBTest;
 import com.may.mapper.ExportMapper;
 import com.may.mapper.TBTestMapper;
 import com.may.service.ExportService;
-import com.may.service.TBTestService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
@@ -25,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes={ApplicationTest.class})// 指定启动类
@@ -39,6 +36,9 @@ public class MyTest {
 
     @Resource
     private TBTestMapper tbTestMapper;
+
+    @Resource
+    private ExportExcel exportExcel;
 
     @Test
     public void test(){
@@ -65,13 +65,18 @@ public class MyTest {
 
     @Test
     public void test3(){
-        IPage<LinkedHashMap> page = exportService.customQuery("select * from tb_test",new Page<LinkedHashMap>(2, 2));
+        IPage<LinkedHashMap> page = exportService.customQuery("select * from tb_test",new Page<LinkedHashMap>(1, 5));
         List<LinkedHashMap> records = page.getRecords();
         System.out.println(page.getTotal());
         System.out.println(page.getPages());
-//        records.stream().map(el -> el.get("id")).forEach(System.out::println);
-
+        records.stream().map(el -> el.get("id")).forEach(System.out::println);
     }
+
+    @Test
+    public void teet4(){
+        exportExcel.doWork();
+    }
+
 
 
     public String[] getDataArray() {
