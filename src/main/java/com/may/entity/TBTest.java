@@ -1,11 +1,17 @@
 package com.may.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 
 @Data
 @NoArgsConstructor
+@TableName("tb_test")
 public class TBTest {
+    @TableId(type = IdType.AUTO)
     private Integer id;
     private String clo1;
     private String clo2;

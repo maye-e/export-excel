@@ -2,84 +2,62 @@ package com.may.domain;
 
 import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.lang.Console;
-import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.db.Db;
-import cn.hutool.db.DbUtil;
-import cn.hutool.db.Entity;
-import cn.hutool.db.ds.DSFactory;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelWriter;
-import cn.hutool.setting.Setting;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.may.config.ExportConfig;
+import com.may.service.ExportService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Controller;
 
-import javax.sql.DataSource;
+import javax.annotation.Resource;
 import java.io.File;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.io.FileFilter;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * 批量导出查询 mysql 中的数据到 excel
- * 目前做不了多线程，会提示内存超过 gc 限制的错误
+ * 目前没做多线程，因为会提示内存超过 gc 限制的错误
  */
+@Slf4j
+@Controller
 public class ExportExcel {
 
-    static Setting setting = new Setting("config/config.setting");
-    static final Log log = LogFactory.get("野哥温馨提示");
-    static DataSource ds = DSFactory.get("vm_db"); // 获取指定数据源
-    static Integer pageSize = setting.getInt("pageSize");
-    static String filePath = setting.getStr("filePath");
+    @Resource
+    private ExportConfig config;
 
-    static {
-        if (!StrUtil.endWith(filePath, "\\")) {
-            filePath += "\\";//补全目录，下面好操作
-        }
-        if (pageSize == null) {
-            pageSize = 600000;
+    @Resource
+    private ExportService exportService;
+
+    public void main(String[] args) {
+        String sqlDirectory = config.getSqlDirectory();
+        if (!StrUtil.endWith(sqlDirectory, "\\")) {
+            config.setSqlDirectory(sqlDirectory + "\\");//补全目录，下面好操作
         }
     }
 
-
-    public static void main(String[] args) {
-        ExportExcel exo = new ExportExcel();
-        exo.domain();
-    }
-
-    public void domain() {
+    public void doWork() {
         TimeInterval interval = new TimeInterval();
         interval.start();
 
-        // 识别 classpth 下的文件，且兼容 spring风格，sql\\ 和 sql/ 都可以被识别
-        List<File> files = FileUtil.loopFiles("sql");
-        List<String> fileNames = files.stream().map(file -> file.getName()).collect(Collectors.toList());
-        Console.error("已读取 sql 文件：" + fileNames);
+        List<File> fileList = getSqlFileList(config.getSqlDirectory());
+        fileList.stream().forEach(file -> {
 
-        for (File file : files) {
-            String readSql = FileUtil.readString(file, "utf-8");
-            if (!StrUtil.endWith(readSql, ";")) {
-                readSql += ";";//补全分号，下面字符串操作好统一
-            }
-            // 线程池 lambda 式需要 final 型变量
-            String finalSql = readSql;
-            Number totalCount = null;
-            String sqlCount = StrUtil.format("select count(*) cnt {};", StrUtil.sub(finalSql, StrUtil.indexOfIgnoreCase(finalSql, "from"), -1));
-            try {
-                totalCount = Db.use(ds).queryNumber(sqlCount);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
 
-            int totalPage = (int) Math.ceil(totalCount.doubleValue() / pageSize);
+
+//            exportService.customQuery("select * from tb_test");
+
+
             //文件名
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
+
+        });
+
+
+        /*for (File file : fileList) {
+
 
             for (int i : ArrayUtil.range(0, totalPage)) {
                     int offset = i * pageSize;
@@ -121,18 +99,43 @@ public class ExportExcel {
                         DbUtil.close(conn);
                     }
             }
-        }
+        }*/
 
-        log.error("全部导出完成，共耗时：{}", interval.intervalPretty());
+//        log.error("全部导出完成，共耗时：{}", interval.intervalPretty());
+    }
+
+
+
+    /**
+     * 格式化 sql 字符串
+     * @param file sql文件
+     * @return 格式化后的 sql 字符串
+     */
+    private String getSqlStr(File file){
+        String sql = FileUtil.readString(file, "utf-8");
+        return StrUtil.endWith(sql, ";") ? sql : sql + ";";//补全分号，字符串操作好统一
     }
 
     /**
-     * 自动调整合适的分页，平均分配（这样不太好，导出的 excel 会多出一些）
+     * 获取指定目录下的sql文件
+     * @param sqlDirectory
+     * @return 获取到的 sql 文件
+     */
+    private List<File> getSqlFileList(String sqlDirectory){
+        // 文件过滤器,只要目标文件
+        FileFilter fileFilter = file -> FileUtil.pathEndsWith(file, "sql") ? true : false;
+        List<File> fileList = FileUtil.loopFiles(sqlDirectory, fileFilter);
+        log.info("------已读取 sql 文件数：{} ------", fileList.size());
+        return fileList;
+    }
+
+    /**
+     * 自动调整合适的分页，每个excel中的行数平均（这样不太好，导出的 excel 会多出一些）
      *
      * @param cnt sql查询结果的总行数
      * @return 分页大小
      */
-    public Integer autoPageSize(int cnt) {
+    private Integer autoPageSize(int cnt) {
         // 设定分页大小的限制是不超过 60w
         int pow = 0;
         while (true) {
@@ -142,34 +145,6 @@ public class ExportExcel {
                 return size;
             }
             pow += 1;
-            continue;
         }
-
-    }
-
-    /**
-     * 用 lamda 写法1
-     */
-    public static List<Entity> insertjdk81() {
-        List<Entity> entities = new ArrayList<>(500);
-        Stream.iterate(0, i -> i + 1).limit(entities.size()).forEach(i -> {
-            Entity entity = Entity.create("user").set("name", "小丽" + i).set("age", "16");
-            entities.add(entity);
-            System.out.println(i);
-        });
-        return entities;
-    }
-
-    /**
-     * 用 lamda 写法2
-     */
-    public static List<Entity> insertjdk82() {
-        List<Entity> entities = new ArrayList<>(500);
-        IntStream.range(0, entities.size()).forEach(i -> {
-            Entity entity = Entity.create("user").set("name", "小华" + i).set("age", "16");
-            entities.add(entity);
-            System.out.println(i);
-        });
-        return entities;
     }
 }
