@@ -13,6 +13,7 @@ import com.may.entity.TBTest;
 import com.may.mapper.ExportMapper;
 import com.may.mapper.TBTestMapper;
 import com.may.service.ExportService;
+import com.may.utils.PageWrapper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -65,15 +66,21 @@ public class MyTest {
 
     @Test
     public void test3(){
-        IPage<LinkedHashMap> page = exportService.customQuery("select * from tb_test",new Page<LinkedHashMap>(1, 5));
-        List<LinkedHashMap> records = page.getRecords();
-        System.out.println(page.getTotal());
-        System.out.println(page.getPages());
-        records.stream().map(el -> el.get("id")).forEach(System.out::println);
+
     }
 
     @Test
-    public void teet4(){
+    public void test4(){
+        IPage page = exportService.customQuery("select * from tb_test", new Page<>(1, 2));
+        List<LinkedHashMap> records = page.getRecords();
+        System.out.println("总记录数："+page.getTotal());
+        System.out.println("总页数"+page.getPages());
+        records.stream().map(el -> el.get("id")).forEach(System.out::print);
+    }
+
+    @Test
+    public void test5(){
+
         exportExcel.doWork();
     }
 

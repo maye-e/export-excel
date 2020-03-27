@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import javax.print.attribute.standard.PagesPerMinute;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -21,18 +22,18 @@ public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> 
     private ExportMapper exportMapper;
 
     @Override
-    public List<LinkedHashMap<String, Object>> customQuery(String sql) {
+    public List<LinkedHashMap> customQuery(String sql) {
         return exportMapper.customQuery(sql);
     }
 
     @Override
-    public IPage<LinkedHashMap> customQuery(String sql, Page<LinkedHashMap> page) {
-        List<LinkedHashMap> datas = exportMapper.customQuery(sql, page);
-        return page.setRecords(datas);
+    public IPage<LinkedHashMap> customQuery(String sql, IPage<LinkedHashMap> page) {
+        List<LinkedHashMap> dataList = exportMapper.customQuery(sql, page);
+        return page.setRecords(dataList);
     }
 
     @Override
-    public Integer getPages(String sql, Page<LinkedHashMap> page) {
+    public Integer getPages(String sql, IPage<LinkedHashMap> page) {
         return Convert.toInt(customQuery(sql,page).getPages());
     }
 }

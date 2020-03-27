@@ -70,11 +70,11 @@ public class InsertDataThread {
      * @param tbTestList
      */
     private Boolean insertDataList(List<TBTest> tbTestList,Integer batchSize) {
-        if(batchSize == null){
-            return tbTestService.saveBatch(tbTestList);
-        }else {
-            return tbTestService.saveBatch(tbTestList,batchSize);
-        }
+        return tbTestService.saveBatch(tbTestList,batchSize);
+    }
+    //方法重载
+    private Boolean insertDataList(List<TBTest> tbTestList) {
+        return tbTestService.saveBatch(tbTestList);
     }
 
     /**

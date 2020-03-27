@@ -5,6 +5,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.may.config.ExportConfig;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -49,14 +51,13 @@ public class ExportExcel {
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
             String sql = getSqlStr(file);
             Integer pages = exportService.getPages(sql, new Page<>(1,config.getPageSize()));
-            IPage<LinkedHashMap> iPage = exportService.customQuery(sql, new Page(1, config.getPageSize()));
-            List<LinkedHashMap> records = iPage.getRecords();
-            BigExcelWriter bigWriter = ExcelUtil.getBigWriter("C:\\tmp\\1.xlsx");
-            for (LinkedHashMap row : records){
-                bigWriter.writeRow(row.values());
-            }
-            bigWriter.flush();
-            bigWriter.close();
+
+            IPage dataPage = exportService.customQuery(sql, new Page(1, config.getPageSize()));
+            List<LinkedHashMap> records = dataPage.getRecords();
+            ExcelWriter writer = ExcelUtil.getBigWriter(1000);
+            writer.setDestFile(new File("D:\\Program Files"));
+            records.forEach(data -> writer.writeRow(data.values()));
+            writer.flush();
             /*IntStream.range(0,pages).forEach(i -> {
                 IPage<LinkedHashMap> page = exportService.customQuery(sql, new Page(i * config.getPageSize() + 1,config.getPageSize()));
                 BigExcelWriter writer = new BigExcelWriter(-1);
@@ -115,8 +116,6 @@ public class ExportExcel {
 
 //        log.error("全部导出完成，共耗时：{}", interval.intervalPretty());
     }
-
-
 
     /**
      * 格式化 sql 字符串
