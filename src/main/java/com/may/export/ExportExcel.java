@@ -113,7 +113,6 @@ public class ExportExcel {
                             writer.writeRow(map.values());//只是将数据写入 sheet
                         }
                         writer.flush();// 将数据刷如磁盘，刷新后会关闭流
-                        writer.close();
                         log.error("导出成功：{}", outFile);
                     } catch (SQLException e) {
                         e.printStackTrace();
