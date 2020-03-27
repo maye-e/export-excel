@@ -1,8 +1,8 @@
 ## db.setting文件
 [ecs_db]
-url = jdbc:mysql://129.204.36.134:3306/test
-user = root
-pass = 123456-abc
+url = jdbc:mysql://xxx.xxx.xx.xxx:3306/test
+user = xxx
+pass = xxx
 
 [vm_db]
 url = jdbc:mysql://192.168.20.128:3306/test?useUnicode=true&characterEncoding=UTF-8
