@@ -86,7 +86,9 @@ public class ExportExcel {
                 totalCount = Db.use(ds).queryNumber(sqlCount);
                 log.info("查询结束,耗时: {} ,总行数为：{}",interval.intervalPretty(), totalCount);
             } catch (SQLException e) {
+                log.error("行数查询失败,请检查 sql 语句、网络环境或数据库状态");
                 e.printStackTrace();
+                return;
             }
 
             int totalPage = (int) Math.ceil(totalCount.doubleValue() / pageSize);
@@ -156,7 +158,9 @@ public class ExportExcel {
                         //writer.close();//close前会flush,二者选其一,不可都写,会报异常,提示流已关闭
                         log.info("导出成功：{} ,耗时: {}", outFile,interval.intervalPretty());
                     } catch (SQLException e) {
+                        log.error("导出查询失败,请检查 sql 语句、网络环境或数据库状态");
                         e.printStackTrace();
+                        return;
                     } finally {
                         DbUtil.close(conn);
                     }
