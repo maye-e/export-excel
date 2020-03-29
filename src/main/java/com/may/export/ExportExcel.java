@@ -61,18 +61,17 @@ public class ExportExcel {
         interval.start();
         ExportExcel exo = new ExportExcel();
         exo.domain();
-        log.info("程序执行完毕,执行总时长: {}",interval.intervalPretty());
+        log.info("程序执行完毕,总耗时: {}",interval.intervalPretty());
     }
 
     public void domain() {
         TimeInterval interval = new TimeInterval();
-        interval.start();//启动一个计时器
 
         FileFilter fileFilter = file -> FileUtil.pathEndsWith(file, "sql") ? true : false;
         // 识别 classpath 下的文件，且兼容 spring风格，sql\\ 和 sql/ 都可以被识别
         List<File> files = FileUtil.loopFiles("sql",fileFilter);
         List<String> fileNames = files.stream().map(file -> file.getName()).collect(Collectors.toList());
-        log.info("已读取 {} 个sql文件：{}", fileNames.size(), fileNames);
+        Console.error("已读取 {} 个sql文件：{}", fileNames.size(), fileNames);
         if (fileNames.size() == 0) return;
         for (File file : files) {
             String readSql = FileUtil.readString(file, "utf-8");
@@ -83,6 +82,7 @@ public class ExportExcel {
             String sqlCount = StrUtil.format("select count(*) cnt {};", StrUtil.sub(readSql, StrUtil.indexOfIgnoreCase(readSql, "from"), -1));
             try {
                 log.info("开始查询总行数...");
+                interval.restart();//启动一个计时器
                 totalCount = Db.use(ds).queryNumber(sqlCount);
                 log.info("查询结束,耗时: {} ,总行数为：{}",interval.intervalPretty(), totalCount);
             } catch (SQLException e) {
@@ -90,7 +90,7 @@ public class ExportExcel {
             }
 
             int totalPage = (int) Math.ceil(totalCount.doubleValue() / pageSize);
-            log.info("总共需要导出的excel个数为：{}", totalPage);
+            Console.log("总共需要导出的excel个数为：{}", totalPage);
             //文件名
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
 
