@@ -155,7 +155,7 @@ public class ExportExcel {
                         }
                         writer.flush();// 将数据刷如磁盘，刷新后会关闭流
                         //writer.close();//close前会flush,二者选其一,不可都写,会报异常,提示流已关闭
-                        Console.error("导出成功：{} ,耗时: {}", outFile,interval.intervalPretty());
+                        log.info("导出成功：{} ,耗时: {}", outFile,interval.intervalPretty());
                     } catch (SQLException e) {
                         e.printStackTrace();
                     } finally {
