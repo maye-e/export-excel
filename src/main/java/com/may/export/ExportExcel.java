@@ -79,10 +79,8 @@ public class ExportExcel {
             if (!StrUtil.endWith(readSql, ";")) {
                 readSql += ";";//补全分号，下面字符串操作好统一
             }
-            // 线程池 lambda 式需要 final 型变量
-            String finalSql = readSql;
             Number totalCount = null;
-            String sqlCount = StrUtil.format("select count(*) cnt {};", StrUtil.sub(finalSql, StrUtil.indexOfIgnoreCase(finalSql, "from"), -1));
+            String sqlCount = StrUtil.format("select count(*) cnt {};", StrUtil.sub(readSql, StrUtil.indexOfIgnoreCase(readSql, "from"), -1));
             try {
                 log.info("开始查询总行数...");
                 totalCount = Db.use(ds).queryNumber(sqlCount);
@@ -98,7 +96,7 @@ public class ExportExcel {
 
             for (int i : NumberUtil.range(1, totalPage)) { // [1,totalPage]
                     int offset = (i-1) * pageSize;
-                    String pageSql = StrUtil.format("{} limit {},{};", StrUtil.sub(finalSql, 0, -1), offset, pageSize);
+                    String pageSql = StrUtil.format("{} limit {},{};", StrUtil.sub(readSql, 0, -1), offset, pageSize);
                     Connection conn = null;
                     try {
                         conn = ds.getConnection();
@@ -119,7 +117,6 @@ public class ExportExcel {
                         interval.restart();
                         while (result.next()) {
                             HashMap<String, Object> map = new LinkedHashMap<>(columnCount);
-                            // ArrayUtil.range 含头不含尾 0-30
                             for (int j : NumberUtil.range(1, columnCount)) {
                                 // 索引从 1 开始
                                 String columnLabel = metaData.getColumnLabel(j);
@@ -137,9 +134,11 @@ public class ExportExcel {
                                 } else if (columnValue instanceof BigDecimal) {
                                     columnValue = result.getBigDecimal(columnLabel);
                                 } else if (columnValue instanceof Date) {//date 是父类，下面的都是它的子类
-                                    if (columnValue instanceof Timestamp || columnValue instanceof DateTime) {//包含日期和时间
+                                    if (columnValue instanceof Timestamp) {//包含日期和时间
                                         columnValue = DateUtil.formatDateTime(result.getTimestamp(columnLabel));//默认格式为：yyyy-MM-dd HH:mm:ss
-                                    } else if (columnValue instanceof Time) {//只包含时间
+                                    }else if (columnValue instanceof DateTime){
+                                        columnValue = DateUtil.formatDateTime(result.getDate(columnLabel));
+                                    }else if (columnValue instanceof Time) {//只包含时间
                                         columnValue = DateUtil.formatTime(result.getTime(columnLabel));
                                     } else {//只包含日期
                                         columnValue = DateUtil.formatDate(result.getDate(columnLabel));
@@ -153,7 +152,7 @@ public class ExportExcel {
                             }
                             writer.writeRow(map.values());//只是将数据写入 sheet
                         }
-                        writer.flush();// 将数据刷如磁盘，刷新后会关闭流
+                        writer.flush();// 将数据刷入磁盘，刷新后会关闭流
                         //writer.close();//close前会flush,二者选其一,不可都写,会报异常,提示流已关闭
                         log.info("导出成功：{} ,耗时: {}", outFile,interval.intervalPretty());
                     } catch (SQLException e) {
@@ -181,7 +180,6 @@ public class ExportExcel {
                 return size;
             }
             pow += 1;
-            continue;
         }
 
     }
