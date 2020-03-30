@@ -65,8 +65,8 @@ public class MyTest {
     }
 
     @Test
-    public void test3(){
-
+    public void test3() throws Exception{
+        exportService.get();
     }
 
     @Test
