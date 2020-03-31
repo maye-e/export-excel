@@ -6,7 +6,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Console;
-import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.db.Db;
@@ -24,11 +23,8 @@ import java.io.File;
 import java.io.FileFilter;
 import java.math.BigDecimal;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -61,7 +57,7 @@ public class ExportExcel {
         interval.start();
         ExportExcel exo = new ExportExcel();
         exo.domain();
-        log.info("程序执行完毕,总耗时: {}",interval.intervalPretty());
+        log.info("程序执行完毕,总耗时: {}", interval.intervalPretty());
     }
 
     public void domain() {
@@ -69,7 +65,7 @@ public class ExportExcel {
 
         FileFilter fileFilter = file -> FileUtil.pathEndsWith(file, "sql") ? true : false;
         // 识别 classpath 下的文件，且兼容 spring风格，sql\\ 和 sql/ 都可以被识别
-        List<File> files = FileUtil.loopFiles("sql",fileFilter);
+        List<File> files = FileUtil.loopFiles("sql", fileFilter);
         List<String> fileNames = files.stream().map(file -> file.getName()).collect(Collectors.toList());
         Console.error("已读取 {} 个sql文件：{}", fileNames.size(), fileNames);
         if (fileNames.size() == 0) return;
@@ -81,89 +77,87 @@ public class ExportExcel {
             Number totalCount = null;
             String sqlCount = StrUtil.format("select count(*) cnt {};", StrUtil.sub(readSql, StrUtil.indexOfIgnoreCase(readSql, "from"), -1));
             try {
-                log.info("开始查询总行数...");
+                log.info("[{}] 开始查询总行数...", file.getName());
                 interval.restart();//启动一个计时器
                 totalCount = Db.use(ds).queryNumber(sqlCount);
-                log.info("查询结束,耗时: {} ,总行数为：{}",interval.intervalPretty(), totalCount);
             } catch (SQLException e) {
-                log.error("行数查询失败,请检查 sql 语句、网络环境或数据库状态");
+                log.error("[{}] 总行数查询失败,请检查 sql 语句、网络环境或数据库状态", file.getName());
                 e.printStackTrace();
                 return;
             }
-
             int totalPage = (int) Math.ceil(totalCount.doubleValue() / pageSize);
-            Console.log("总共需要导出的excel个数为：{}", totalPage);
+            log.info("[{}] 总行数查询结束,耗时: {} ,总行数为：{} ,需要导出的excel个数为：{}", file.getName(), interval.intervalPretty(), totalCount, totalPage);
             //文件名
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
 
             for (int i : NumberUtil.range(1, totalPage)) { // [1,totalPage]
-                    int offset = (i-1) * pageSize;
-                    String pageSql = StrUtil.format("{} limit {},{};", StrUtil.sub(readSql, 0, -1), offset, pageSize);
-                    Connection conn = null;
-                    try {
-                        conn = ds.getConnection();
-                        PreparedStatement statement = conn.prepareStatement(pageSql);
-                        log.info("开始进行第 {} 个查询...", i);
-                        interval.restart();
-                        ResultSet result = statement.executeQuery();
-                        ResultSetMetaData metaData = result.getMetaData();
-                        int columnCount = metaData.getColumnCount();// 列数
+                int offset = (i - 1) * pageSize;
+                String pageSql = StrUtil.format("{} limit {},{};", StrUtil.sub(readSql, 0, -1), offset, pageSize);
+                Connection conn = null;
+                try {
+                    conn = ds.getConnection();
+                    PreparedStatement statement = conn.prepareStatement(pageSql);
+                    log.info("[{}] 开始进行第 {} 个查询...", file.getName(), i);
+                    interval.restart();
+                    ResultSet result = statement.executeQuery();
+                    ResultSetMetaData metaData = result.getMetaData();
+                    int columnCount = metaData.getColumnCount();// 列数
 
-                        String outFile = totalPage > 1 ? fileName + "-" + i : fileName;
-                        // 这里实际是创建了一个 SXSSFBook
-                        ExcelWriter writer = ExcelUtil.getBigWriter(1000);// 内存中的行数为 1000
-                        writer.setDestFile(new File(StrUtil.format("{}{}.xlsx", filePath, outFile)));
-                        writer.disableDefaultStyle();//禁用默认样式
-                        boolean hasWriteHead = false;// 控制写入头
-                        log.info("第 {} 个查询完毕,耗时: {} ,开始导出第 {}/{} 个excel...", i,interval.intervalPretty(), i,totalPage);
-                        interval.restart();
-                        while (result.next()) {
-                            HashMap<String, Object> map = new LinkedHashMap<>(columnCount);
-                            for (int j : NumberUtil.range(1, columnCount)) {
-                                // 索引从 1 开始
-                                String columnLabel = metaData.getColumnLabel(j);
-                                Object columnValue = result.getObject(columnLabel);
-                                if (columnValue instanceof String) {
-                                    columnValue = result.getString(columnLabel);
-                                } else if (columnValue instanceof Integer) {
-                                    columnValue = result.getInt(columnLabel);
-                                } else if (columnValue instanceof Long) {
-                                    columnValue = Convert.toStr(result.getLong(columnLabel));//转换成字符串，避免在excel中显示成科学计数法
-                                } else if (columnValue instanceof Float) {
-                                    columnValue = result.getFloat(columnLabel);
-                                } else if (columnValue instanceof Double) {
-                                    columnValue = result.getDouble(columnLabel);
-                                } else if (columnValue instanceof BigDecimal) {
-                                    columnValue = result.getBigDecimal(columnLabel);
-                                } else if (columnValue instanceof Date) {//date 是父类，下面的都是它的子类
-                                    if (columnValue instanceof Timestamp) {//包含日期和时间
-                                        columnValue = DateUtil.formatDateTime(result.getTimestamp(columnLabel));//默认格式为：yyyy-MM-dd HH:mm:ss
-                                    }else if (columnValue instanceof DateTime){
-                                        columnValue = DateUtil.formatDateTime(result.getDate(columnLabel));
-                                    }else if (columnValue instanceof Time) {//只包含时间
-                                        columnValue = DateUtil.formatTime(result.getTime(columnLabel));
-                                    } else {//只包含日期
-                                        columnValue = DateUtil.formatDate(result.getDate(columnLabel));
-                                    }
+                    String outFile = totalPage > 1 ? fileName + "-" + i : fileName;
+                    // 这里实际是创建了一个 SXSSFBook
+                    ExcelWriter writer = ExcelUtil.getBigWriter(1000);// 内存中的行数为 1000
+                    writer.setDestFile(new File(StrUtil.format("{}{}.xlsx", filePath, outFile)));
+                    writer.disableDefaultStyle();//禁用默认样式
+                    boolean hasWriteHead = false;// 控制写入头
+                    log.info("[{}] 第 {} 个查询完毕,耗时: {} ,开始导出第 {}/{} 个excel...", file.getName(), i, interval.intervalPretty(), i, totalPage);
+                    interval.restart();
+                    while (result.next()) {
+                        HashMap<String, Object> map = new LinkedHashMap<>(columnCount);
+                        for (int j : NumberUtil.range(1, columnCount)) {
+                            // 索引从 1 开始
+                            String columnLabel = metaData.getColumnLabel(j);
+                            Object columnValue = result.getObject(columnLabel);
+                            if (columnValue instanceof String) {
+                                columnValue = result.getString(columnLabel);
+                            } else if (columnValue instanceof Integer) {
+                                columnValue = Convert.toStr(result.getInt(columnLabel));
+                            } else if (columnValue instanceof Long) {
+                                columnValue = Convert.toStr(result.getLong(columnLabel));//转换成字符串，避免在excel中显示成科学计数法
+                            } else if (columnValue instanceof Float) {
+                                columnValue = result.getFloat(columnLabel);
+                            } else if (columnValue instanceof Double) {
+                                columnValue = result.getDouble(columnLabel);
+                            } else if (columnValue instanceof BigDecimal) {
+                                columnValue = result.getBigDecimal(columnLabel);
+                            } else if (columnValue instanceof Date) {//date 是父类，下面的都是它的子类
+                                if (columnValue instanceof Timestamp) {//包含日期和时间
+                                    columnValue = DateUtil.formatDateTime(result.getTimestamp(columnLabel));//默认格式为：yyyy-MM-dd HH:mm:ss
+                                } else if (columnValue instanceof DateTime) {
+                                    columnValue = DateUtil.formatDateTime(result.getDate(columnLabel));
+                                } else if (columnValue instanceof Time) {//只包含时间
+                                    columnValue = DateUtil.formatTime(result.getTime(columnLabel));
+                                } else {//只包含日期
+                                    columnValue = DateUtil.formatDate(result.getDate(columnLabel));
                                 }
-                                map.put(columnLabel, columnValue);
                             }
-                            if (!hasWriteHead) {
-                                writer.writeHeadRow(map.keySet());
-                                hasWriteHead = true;
-                            }
-                            writer.writeRow(map.values());//只是将数据写入 sheet
+                            map.put(columnLabel, columnValue);
                         }
-                        writer.flush();// 将数据刷入磁盘，刷新后会关闭流
-                        //writer.close();//close前会flush,二者选其一,不可都写,会报异常,提示流已关闭
-                        log.info("导出成功：{} ,耗时: {}", outFile,interval.intervalPretty());
-                    } catch (SQLException e) {
-                        log.error("导出查询失败,请检查 sql 语句、网络环境或数据库状态");
-                        e.printStackTrace();
-                        return;
-                    } finally {
-                        DbUtil.close(conn);
+                        if (!hasWriteHead) {
+                            writer.writeHeadRow(map.keySet());
+                            hasWriteHead = true;
+                        }
+                        writer.writeRow(map.values());//只是将数据写入 sheet
                     }
+                    writer.flush();// 将数据刷入磁盘，刷新后会关闭流
+                    //writer.close();//close前会flush,二者选其一,不可都写,会报异常,提示流已关闭
+                    log.info("[{}] 导出成功：{} ,耗时: {}", file.getName(), outFile, interval.intervalPretty());
+                } catch (SQLException e) {
+                    log.error("[{}] 导出查询失败,请检查 sql 语句、网络环境或数据库状态", file.getName());
+                    e.printStackTrace();
+                    return;
+                } finally {
+                    DbUtil.close(conn);
+                }
             }
         }
     }
