@@ -13,7 +13,6 @@ import com.may.entity.TBTest;
 import com.may.mapper.ExportMapper;
 import com.may.mapper.TBTestMapper;
 import com.may.service.ExportService;
-import com.may.utils.PageWrapper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,7 +65,6 @@ public class MyTest {
 
     @Test
     public void test3() throws Exception{
-        exportService.get();
     }
 
     @Test
