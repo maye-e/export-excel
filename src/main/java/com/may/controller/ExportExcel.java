@@ -2,6 +2,7 @@ package com.may.controller;
 
 import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelUtil;
@@ -11,14 +12,18 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.may.config.ExportConfig;
 import com.may.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Controller;
 
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.*;
 
 /**
  * 批量导出查询 mysql 中的数据到 excel
@@ -52,6 +57,35 @@ public class ExportExcel {
             String fileName = StrUtil.removeSuffix(file.getName(), ".sql");
             String sql = getSqlStr(file);
             Integer pages = exportService.getPages(sql, new Page<>(1,config.getPageSize()));
+            ExecutorService pool = new ThreadPoolExecutor(1,//常驻线程数
+                    2,//最大线程数
+                    1L,
+                    TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(10),//队列任务数
+                    Executors.defaultThreadFactory(),
+                    new ThreadPoolExecutor.DiscardPolicy());
+            CompletionService<Pair<ResultSet, ExcelWriter>> service = new ExecutorCompletionService<>(pool);
+            for (int i : ArrayUtil.range(pages)){
+                ExcelWriter writer = new BigExcelWriter();
+                Pair<String, ExcelWriter> pair = Pair.of(sql, writer);
+                Callable<Pair<ResultSet, ExcelWriter>> task = exportService.queryForExcelTask(pair);
+                service.submit(task);
+            }
+
+            CountDownLatch latch = new CountDownLatch(pages);
+            while (latch.getCount() > 0){
+                try {
+                    if (service.take().isDone()){
+                        Pair<ResultSet, ExcelWriter> pair = service.take().get();
+                        exportService.exportExcel(pair);
+                        latch.countDown();
+                    }
+                    try{TimeUnit.SECONDS.sleep(1);} catch (InterruptedException e) {e.printStackTrace();}
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
 
             IPage dataPage = exportService.customQuery(sql, new Page(1, config.getPageSize()));
             List<LinkedHashMap> records = dataPage.getRecords();
