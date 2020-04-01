@@ -44,7 +44,7 @@ public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> 
     private ExportMapper exportMapper;
 
     @Resource
-    private SqlSessionTemplate sqlSession;//springboot自动注入了 sqlsession,无需手动配置
+    private SqlSessionTemplate sqlSession;//springboot自动注入了 sqlSession,无需手动配置
 
     @Override
     public List<LinkedHashMap> customQuery(String sql) {

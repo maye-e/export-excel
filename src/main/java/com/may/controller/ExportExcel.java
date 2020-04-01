@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 
 import javax.annotation.Resource;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 批量导出查询 mysql 中的数据到 excel
@@ -36,7 +37,19 @@ public class ExportExcel {
     }
 
 
+    public void aopDemo(){
+        System.out.println("我要睡2秒...");
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("我睡醒了！");
+    }
 
+    public static void main(String[] args) {
+        new ExportExcel().aopDemo();
+    }
 
 
     /**
