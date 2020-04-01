@@ -4,27 +4,41 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.poi.excel.BigExcelWriter;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.may.config.ExportConfig;
 import com.may.mapper.ExportMapper;
 import com.may.service.ExportService;
+import com.may.utils.WorkTool;
 import org.apache.commons.lang3.tuple.Pair;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> implements ExportService {
+
+    private static final ThreadLocal<Pair<String, ExcelWriter>> taskThreadLocal = new ThreadLocal<>();
+
+    @Resource
+    private ExportConfig config;
 
     @Resource
     private ExportMapper exportMapper;
@@ -49,12 +63,14 @@ public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> 
     }
 
     @Override
-    public Callable<Pair<ResultSet, ExcelWriter>> queryForExcelTask(Pair<String, ExcelWriter> pair) {
+    public Callable<Pair<ResultSet, ExcelWriter>> buildTask(Pair<String, ExcelWriter> pair) {
+        taskThreadLocal.set(pair);
         return () -> {
+            Pair<String, ExcelWriter> PairOf = taskThreadLocal.get();
             Connection conn = sqlSession.getConnection();
-            PreparedStatement statement = conn.prepareStatement(pair.getLeft());
+            PreparedStatement statement = conn.prepareStatement(PairOf.getLeft());
             ResultSet result = statement.executeQuery();
-            return Pair.of(result,pair.getRight());
+            return Pair.of(result,PairOf.getRight());
         };
     }
 
@@ -103,5 +119,59 @@ public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> 
             writer.writeRow(map.values());//只是将数据写入 sheet
         }
         writer.flush();// 将数据刷入磁盘，刷新后会关闭流
+    }
+
+    @Override
+    public void oneSqlOfPagesTask(String sql, Integer pages, String fileNameTemplate) {
+        IntStream.rangeClosed(1,pages).forEach(i -> {
+            int pageSize = config.getPageSize();
+            int offset = (i - 1) * pageSize;
+            String pageSql = StrUtil.format("{} limit {},{};", StrUtil.sub(sql, 0, -1), offset, pageSize);
+            String excelFileName = fileNameTemplate;
+            if (pages > 1){
+                excelFileName += fileNameTemplate + i;
+            }
+            //输出文件路径
+            String destFilePath = StrUtil.format("{}{}.xlsx",config.getExcelDirectory(),excelFileName);
+            ExcelWriter writer = new BigExcelWriter(destFilePath);
+            Pair<String, ExcelWriter> pair = Pair.of(pageSql, writer);
+            Callable<Pair<ResultSet, ExcelWriter>> task = buildTask(pair);
+            WorkTool.asyncExecTask(task);
+        });
+    }
+
+    @Override
+    public void loopSqlFilesAndSubmit() {
+        List<File> fileList = WorkTool.loopSqlFiles(config.getSqlDirectory());
+        fileList.stream().forEach(file -> {
+            //一个sql文件中的语句
+            String sql = WorkTool.getSqlStr(file);
+            //将会导出到多少页
+            Integer pages = getPages(sql, new Page<>(1,config.getPageSize()));//todo page查询也可以多线程，谁先查出来行数，导谁
+            //文件名模板。 最终输出的excel名会根据此模板创建
+            String fileNameTemplate = StrUtil.removeSuffix(file.getName(), ".sql");
+            //创建这条sql所有的分页导出任务，并提交
+            oneSqlOfPagesTask(sql,pages,fileNameTemplate);
+        });
+    }
+
+    @Override
+    public void getFutureAndExport() throws InterruptedException,ExecutionException,SQLException{
+        //已完成的任务数小于总任务数
+        while (WorkTool.getCompletedTaskCount() < WorkTool.getTaskCount()){
+            Future <Pair<ResultSet, ExcelWriter>> future = WorkTool.getFuture();
+            Pair<ResultSet, ExcelWriter> pair = future.get();
+            exportExcel(pair);
+        }
+    }
+
+
+    @Override
+    public void doWork() throws Exception{
+        //1.遍历所有的sql文件，然后提交查询任务，等待返回结果
+        loopSqlFilesAndSubmit();
+
+        //2.取到线程执行的结果就去导出excel
+        getFutureAndExport();
     }
 }
