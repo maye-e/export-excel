@@ -1,6 +1,7 @@
 package com.may.controller;
 
 import cn.hutool.core.util.StrUtil;
+import com.may.annotation.MethodTimeInterval;
 import com.may.config.ExportConfig;
 import com.may.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class ExportExcel {
     }
 
 
+    @MethodTimeInterval("aopDemo")
     public void aopDemo(){
         System.out.println("我要睡2秒...");
         try {

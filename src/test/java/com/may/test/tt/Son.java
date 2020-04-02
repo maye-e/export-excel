@@ -1,6 +1,6 @@
 package com.may.test.tt;
 
-import com.may.annotations.TimeInterval;
+import com.may.annotation.MethodTimeInterval;
 
 public class Son extends Father {
 
@@ -8,7 +8,7 @@ public class Son extends Father {
         System.out.println("son create");
     }
 
-    @TimeInterval("ss")
+    @MethodTimeInterval("ss")
     @Override
     public boolean fun(String s){
         System.out.println("fun1"+s);
@@ -24,7 +24,7 @@ public class Son extends Father {
 
     public static void main(String[] args) {
         Son son = new Son();
-//        Encrypt encrypt = AnnotationUtils.findAnnotation(method, Encrypt.class);
+
         son.fun("may");
     }
 }

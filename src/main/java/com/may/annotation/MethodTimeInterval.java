@@ -1,4 +1,4 @@
-package com.may.annotations;
+package com.may.annotation;
 
 import java.lang.annotation.*;
 
@@ -7,7 +7,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 // Retention注解决定MyAnnotation注解的生命周期
 @Retention(RetentionPolicy.RUNTIME)
-public @interface TimeInterval {
+public @interface MethodTimeInterval {
     /**
      * 注解的默认属性值
      *

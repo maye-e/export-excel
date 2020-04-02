@@ -42,11 +42,10 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.10</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/cglib/cglib -->
+        <!-- SpringBoot 拦截器 -->
         <dependency>
-            <groupId>cglib</groupId>
-            <artifactId>cglib</artifactId>
-            <version>3.3.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
         <dependency>
