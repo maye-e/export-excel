@@ -3,12 +3,12 @@ package com.may.controller;
 import cn.hutool.core.util.StrUtil;
 import com.may.annotation.MethodTimeInterval;
 import com.may.config.ExportConfig;
+import com.may.exception.NoticeException;
 import com.may.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 
 import javax.annotation.Resource;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 批量导出查询 mysql 中的数据到 excel
@@ -31,28 +31,17 @@ public class ExportExcel {
         }
     }
 
-
+    @MethodTimeInterval("主程序操作")
     public void doWork() throws Exception{
         exportService.doWork();
-        //todo TimeInterval aop
-    }
 
+    }
 
     @MethodTimeInterval("aopDemo")
     public void aopDemo(){
-        System.out.println("我要睡2秒...");
-        try {
-            TimeUnit.SECONDS.sleep(2);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        System.out.println("我睡醒了！");
+        System.out.println(1);
+        throw  new NoticeException("有异常...");
     }
-
-    public static void main(String[] args) {
-        new ExportExcel().aopDemo();
-    }
-
 
     /**
      * 自动调整合适的分页，每个excel中的行数平均（这样不太好，导出的 excel 会多出一些）

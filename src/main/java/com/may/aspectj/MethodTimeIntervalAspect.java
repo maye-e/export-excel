@@ -26,23 +26,23 @@ public class MethodTimeIntervalAspect {
 
     // 配置织入点
     @Pointcut("@annotation(com.may.annotation.MethodTimeInterval)")
-    public void dataScopePointCut() {
+    public void pointCut() {
     }
 
-    @Before("dataScopePointCut()")
+    @Before("pointCut()")
     public void doBefore(JoinPoint joinPoint) {
         // 获得注解
         MethodTimeInterval methodTimeInterval = getAnnotationLog(joinPoint);
         if (methodTimeInterval == null) return;
         methodDescription = methodTimeInterval.value();//获得注解值
-        Console.log("[{}] 开始执行...",methodDescription);
-        interval.start();//开始计时
+        Console.log("[{}] 开始...",methodDescription);
+        interval.restart();//开始计时
     }
 
-    @After("dataScopePointCut()")
+    @After("pointCut()")
     public void doAfter(){
 
-        Console.log("[{}] 执行结束，耗时：[{}]",methodDescription,interval.intervalPretty());
+        Console.log("[{}] 完成，耗时：[{}]",methodDescription,interval.intervalPretty());
     }
 
     /**
@@ -54,10 +54,7 @@ public class MethodTimeIntervalAspect {
         MethodSignature methodSignature = (MethodSignature) signature;
         Method method = methodSignature.getMethod();
 
-        if (method != null)
-        {
-            return method.getAnnotation(MethodTimeInterval.class);
-        }
-        return null;
+        if (method == null) return null;
+        return method.getAnnotation(MethodTimeInterval.class);
     }
 }
