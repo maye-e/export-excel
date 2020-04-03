@@ -13,7 +13,7 @@ spring:
 
 # mybatis-plus 配置
 mybatis-plus:
-  mapper-locations: classpath:mapper/*.xml
+  mapper-locations: classpath:mapper/*Mapper.xml
   # 关闭mybatis-plus的banner打印
   global-config:
     banner: false

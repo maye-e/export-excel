@@ -147,7 +147,7 @@ public class ExportServiceImpl extends ServiceImpl<ExportMapper, LinkedHashMap> 
             //一个sql文件中的语句
             String sql = WorkTool.getSqlStr(file);
             //将会导出到多少页
-            Integer pages = getPages(sql, new Page<>(1,config.getPageSize()));//todo page查询也可以多线程，谁先查出来行数，导谁
+            Integer pages = getPages(sql, new Page<>(1,config.getPageSize()));
             //文件名模板。 最终输出的excel名会根据此模板创建
             String fileNameTemplate = StrUtil.removeSuffix(file.getName(), ".sql");
             //创建这条sql所有的分页导出任务，并提交

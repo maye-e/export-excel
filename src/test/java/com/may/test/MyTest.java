@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.may.ApplicationTest;
+import com.may.config.ExportConfig;
 import com.may.controller.ExportExcel;
 import com.may.entity.TBTest;
 import com.may.mapper.ExportMapper;
@@ -40,6 +41,9 @@ public class MyTest {
     @Resource
     private ExportExcel exportExcel;
 
+    @Resource
+    private ExportConfig config;
+
     @Test
     public void test(){
         int[] count = NumberUtil.range(1, 10);
@@ -65,6 +69,7 @@ public class MyTest {
 
     @Test
     public void test3() throws Exception{
+        Integer pages = exportService.getPages("", new Page<>(1,config.getPageSize()));
     }
 
     @Test

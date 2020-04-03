@@ -3,17 +3,12 @@ package com.may.controller;
 import cn.hutool.core.util.StrUtil;
 import com.may.annotation.MethodTimeInterval;
 import com.may.config.ExportConfig;
-import com.may.exception.NoticeException;
 import com.may.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 
 import javax.annotation.Resource;
 
-/**
- * 批量导出查询 mysql 中的数据到 excel
- * 目前没做多线程，因为会提示内存超过 gc 限制的错误
- */
 @Slf4j
 @Controller
 public class ExportExcel {
@@ -34,13 +29,6 @@ public class ExportExcel {
     @MethodTimeInterval("主程序操作")
     public void doWork() throws Exception{
         exportService.doWork();
-
-    }
-
-    @MethodTimeInterval("aopDemo")
-    public void aopDemo(){
-        System.out.println(1);
-        throw  new NoticeException("有异常...");
     }
 
     /**
